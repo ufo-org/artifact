@@ -1,0 +1,105 @@
+---
+title: "Demo"
+author: "submitter"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+plot_to_pdf_and_here <- function(path, data) {
+  pdf(path, width = 4, height = 4)
+  plot(data)
+  dev.off()
+  
+  plot(data)
+}
+```
+
+```{r}
+library(ufovectors)
+library(ufoaltrep)
+library(microbenchmark)
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(readr)
+```
+
+```{R}
+ufo_set_debug_mode(F)
+options(scipen=999) # effectively turns off scientific notation
+```
+
+```{r generate}
+generate_binary_file <- function(path, range, repeats) {
+  sum <- 0
+  minimum <- integer(0)
+  maximum <- integer(0)
+  size <- length(range) * repeats
+  f <- file(path, "wb")
+  for (i in 0:repeats) {
+    writeBin(range, f)
+    sum <- sum + sum(range, na.rm = TRUE)
+    minimum <- min(minimum, range, na.rm = TRUE)
+    maximum <- max(maximum, range, na.rm = TRUE)
+  }
+  close(f)
+  list(path=path, sum=sum, size=size, min=minimum, max=maximum)
+}
+
+stats <- list(
+  # just a File Backed list of numbers 1-1M repeated 32 times to stand in for more interesting data
+  stats_seq_ints = generate_binary_file("32M_seq_ints.bin", 1:1000000, 32)
+)
+
+size <- 32 * 1000 * 1000
+# some tests would run a long time if all elements were used, take a sample
+sample_size <- 1000 * 1000
+set.seed(14) # Nothing up my sleeve
+some_function <- function(x) x
+
+print(stats)
+
+file.exists(stats$stats_seq_ints$path)
+
+all_data <- tibble(
+  benchmark=character(0), 
+  framework=character(0),
+  time=numeric(0)
+)
+
+```
+
+### Sum
+
+```{r fb-sum32mln1, cache=T, fig.height=3, fig.width=3, eval = FALSE, echo = FALSE}
+ufo <- ufo_integer_bin(stats$stats_seq_ints$path, read_only=FALSE)
+ufo.ro <- ufo_integer_bin(stats$stats_seq_ints$path, read_only=TRUE)
+altrep <- altrep_ufo_integer_bin(stats$stats_seq_ints$path)
+
+result <- microbenchmark(
+  "UFO" = { sum(ufo) },
+  "UFO/RO" = { sum(ufo.ro) },
+  "ALTREP" = { sum(altrep) },
+  check = function(values) {
+    all(sapply(values, function(result) result == stats$stats_seq_ints$sum))
+  },
+  times = 100L
+)
+
+all_data <- rbind(all_data, tibble(
+  benchmark="File-backed/32M seq/sum", 
+  framework=as.character(result$expr),
+  time=result$time,
+))
+
+plot <- autoplot(result) +
+  #scale_y_continuous(labels = scales::label_number_si()) +
+  #xlab("time [ns]") +
+  ggtitle("File-backed/32M seq/sum")+
+  theme_minimal() 
+
+plot_to_pdf_and_here("32M_seq_bin_sum.pdf", plot)
+```
