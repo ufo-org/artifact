@@ -4,6 +4,39 @@ author: "submitter"
 output: html_document
 ---
 
+~~~
+Note:
+
+This is an R markdown document. It is like a markdown document, but has
+executable snippets of code in in R and bash. It can be viewed using vscode or
+RStudio, e.g.:
+
+    rstudio ufo-r-vectors.Rmd
+
+There, each chunk can be executed via a button over the code. All paths in this
+file are relative to the location of the file, so set the session's working
+directory to the source file in rstudio before running the snippets:
+
+    Session -> Set working directory -> To source file location
+
+The file can also be executed (in whole) with R using the following bash
+snippet:*
+ 
+    Rscript -e "rmarkdown::render('ufo-r-vectors.Rmd')"
+
+This will compile the document into HTML while executing all the code snippets
+in the document. 
+~~~
+
+This is a quick demonstration of UFOs and how they perform vs R vectors
+ as well as a comparable AltRep implementation of file backed arrays
+
+It is meant to generate similar graphs to those presented in our paper
+ but be much faster to run.
+
+# Setup
+
+First we will set up some preliminaries.
 
 
 ```{r setup, include=FALSE}
@@ -19,11 +52,20 @@ plot_to_pdf_and_here <- function(path, data) {
 }
 ```
 
+### Libraries
+
+High and low water marks are configured when loading the library,
+ we will set them to 2 and 1 megabytes respectively. This is very constrained,
+ normally you would give UFOs several gigabytes to work with, but in this case we
+ want to simulate a larger data set in limited time and space. It also shows how
+ flexible the UFO system is even when the data is much larger than the memory
+ available
+
 ```{r message = FALSE, warning = FALSE }
 # If you want to change the high and low water marks run this line first:
 # detach("package:ufovectors", unload=TRUE)
 
-# set some very low memory bounds for UFOs
+# Set some very low memory bounds for UFOs
 # this will help to show UFO performance without long tests
 # units are megabytes
 options(ufos.high_water_mark_mb=2, ufos.low_water_mark_mb=1)
@@ -40,11 +82,15 @@ library(dplyr)
 library(readr)
 ```
 
-```{R message = FALSE, warning = FALSE }
+```{R echo = FALSE  }
 ufo_set_debug_mode(F)
 
 options(scipen=999) # effectively turns off scientific notation
 ```
+
+### Data
+
+And setup a file with some dummy-data to use in tests
 
 ```{r generate, message = FALSE, warning = FALSE }
 generate_binary_file <- function(path, range, repeats) {
@@ -65,18 +111,15 @@ generate_binary_file <- function(path, range, repeats) {
 
 stats <- list(
   # just a File Backed list of numbers 1-1M repeated 32 times to stand in for more interesting data
-  stats_seq_ints = generate_binary_file("32M_seq_ints.bin", 1:1000000, 32)
+  stats_seq_ints = generate_binary_file("data/demo_32M_seq_ints.bin", 1:1000000, 32)
 )
-
-all_data <- tibble(
-  benchmark=character(0), 
-  framework=character(0),
-  time=numeric(0)
-)
-
 ```
 
-## Constants for sizes and sampling
+### Constants for sizes and sampling
+
+To keep the runtimes down and notr be too taxing on your computer we will only
+ use 128MB of data. When doing element-wise operations we will also be sub-sampling
+ that data only 100,000 times. This allows more runs and nicer more accurate charts.
 
 ```{R  message = FALSE, warning = FALSE }
 # 32 million elements in the test sets, a nice round number
@@ -84,21 +127,23 @@ all_data <- tibble(
 size <- 32 * 1000 * 1000
 # some tests would run a long time if all elements were used, take a sample
 sample_size <- 100 * 1000
-set.seed(14) # Nothing up my sleeve
+set.seed(14) # Initialize the RNG with a nothing up my sleeve number
 
 # a function that does nothing, but forces R to call it
 some_function <- function(x) x
 ```
 
-## Goal
-
-We're going to take a look at some basic UFOs and compare them to AltRep and R vectors
-
 ## File-Backed instances
 
-First we'll compare to AltRep using file-backed arrays
+First we'll compare to AltRep using file-backed arrays.
+Both UFO and AltRep implementations are using the same core function to load data
+ from the file.
 
 ### Sum
+
+Doing a straight sum over all elements is a fast-path for R and will make good use
+ of AltRep's ability to load chunks of data in one call.
+
 ```{r fileBacked_sum, cache=T, fig.height=3, fig.width=3, message = FALSE, warning = FALSE }
 (function(){
 ufo <- ufo_integer_bin(stats$stats_seq_ints$path, read_only=FALSE)
@@ -112,14 +157,14 @@ result <- microbenchmark(
   times = 50L
 )
 
-plot <- autoplot(result) +
+autoplot(result) +
   ggtitle("File-backed/32M seq/sum")+
   theme_minimal() 
 })()
 ```
 
 Performance is comparable on sums.
-AltRep does a good job with this because it loads large chunks when doing bulk operations in R
+Both a good job with this because of loading large chunks
 
 ### Random access
 
@@ -148,10 +193,9 @@ result <- microbenchmark(
   times = 10L
 )
 
-plot <- autoplot(result) +
+autoplot(result) +
   ggtitle("File-backed/32M seq/random access")+
   theme_minimal() 
-
 })()
 ```
 
@@ -179,7 +223,7 @@ result <- microbenchmark(
   times = 100L
 )
 
-plot <- autoplot(result) +
+autoplot(result) +
   ggtitle("In Memory/32M seq/random access")+
   theme_minimal() 
 })()
@@ -217,7 +261,7 @@ result <- microbenchmark(
   times = 10L
 )
 
-plot <- autoplot(result) +
+autoplot(result) +
   ggtitle("In Memory/32M seq/random access")+
   theme_minimal() 
 })()
