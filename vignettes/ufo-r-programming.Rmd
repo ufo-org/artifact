@@ -80,14 +80,14 @@ Then, we add a `DESCRIPTION` file to the `myseq` directory and fill it after
 the following fashion:
 
 ```
-Package: ufoseq
+Package: myseq
 Type: Package
 Title: Implementation of sequences using UFOs.
 Description: Example implementation of UFO vectors that provides larger-than-memory sequence vectors.
 Version: 1.0
-Authors@R: c(person(given = "Anon E.",  family = "Moose", role = c("aut", "cre"),
+Authors@R: c(person(given = "Anthony",  family = "Moose", role = c("aut", "cre"),
                     email = "email@example.com"))
-Maintainer: Anon E. Moose <email@example.com>
+Maintainer: Anthony Moose <email@example.com>
 License: GPL-2 | GPL-3
 Encoding: UTF-8
 LazyData: true
