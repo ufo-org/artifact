@@ -4,6 +4,8 @@ author: "submitter"
 output: html_document
 ---
 
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -17,8 +19,19 @@ plot_to_pdf_and_here <- function(path, data) {
 }
 ```
 
-```{r}
+```{r message = FALSE, warning = FALSE }
+# If you want to change the high and low water marks run this line first:
+# detach("package:ufovectors", unload=TRUE)
+
+# set some very low memory bounds for UFOs
+# this will help to show UFO performance without long tests
+# units are megabytes
+options(ufos.high_water_mark_mb=2, ufos.low_water_mark_mb=1)
+
+# Load the library
 library(ufovectors)
+
+# and also the other libraries
 library(ufoaltrep)
 library(microbenchmark)
 library(ggplot2)
@@ -27,12 +40,13 @@ library(dplyr)
 library(readr)
 ```
 
-```{R}
+```{R message = FALSE, warning = FALSE }
 ufo_set_debug_mode(F)
+
 options(scipen=999) # effectively turns off scientific notation
 ```
 
-```{r generate}
+```{r generate, message = FALSE, warning = FALSE }
 generate_binary_file <- function(path, range, repeats) {
   sum <- 0
   minimum <- integer(0)
@@ -54,16 +68,6 @@ stats <- list(
   stats_seq_ints = generate_binary_file("32M_seq_ints.bin", 1:1000000, 32)
 )
 
-size <- 32 * 1000 * 1000
-# some tests would run a long time if all elements were used, take a sample
-sample_size <- 1000 * 1000
-set.seed(14) # Nothing up my sleeve
-some_function <- function(x) x
-
-print(stats)
-
-file.exists(stats$stats_seq_ints$path)
-
 all_data <- tibble(
   benchmark=character(0), 
   framework=character(0),
@@ -72,9 +76,31 @@ all_data <- tibble(
 
 ```
 
-### Sum
+## Constants for sizes and sampling
 
-```{r fb-sum32mln1, cache=T, fig.height=3, fig.width=3, eval = FALSE, echo = FALSE}
+```{R  message = FALSE, warning = FALSE }
+# 32 million elements in the test sets, a nice round number
+# these are 32-bit (4 byte) ints so that is 128 megs
+size <- 32 * 1000 * 1000
+# some tests would run a long time if all elements were used, take a sample
+sample_size <- 100 * 1000
+set.seed(14) # Nothing up my sleeve
+
+# a function that does nothing, but forces R to call it
+some_function <- function(x) x
+```
+
+## Goal
+
+We're going to take a look at some basic UFOs and compare them to AltRep and R vectors
+
+## File-Backed instances
+
+First we'll compare to AltRep using file-backed arrays
+
+### Sum
+```{r fileBacked_sum, cache=T, fig.height=3, fig.width=3, message = FALSE, warning = FALSE }
+(function(){
 ufo <- ufo_integer_bin(stats$stats_seq_ints$path, read_only=FALSE)
 ufo.ro <- ufo_integer_bin(stats$stats_seq_ints$path, read_only=TRUE)
 altrep <- altrep_ufo_integer_bin(stats$stats_seq_ints$path)
@@ -83,23 +109,121 @@ result <- microbenchmark(
   "UFO" = { sum(ufo) },
   "UFO/RO" = { sum(ufo.ro) },
   "ALTREP" = { sum(altrep) },
-  check = function(values) {
-    all(sapply(values, function(result) result == stats$stats_seq_ints$sum))
+  times = 50L
+)
+
+plot <- autoplot(result) +
+  ggtitle("File-backed/32M seq/sum")+
+  theme_minimal() 
+})()
+```
+
+Performance is comparable on sums.
+AltRep does a good job with this because it loads large chunks when doing bulk operations in R
+
+### Random access
+
+In Random access there are two forces at work.
+One is that for UFOs we must load whole chunks to access even one element
+The other is that AltRep does a lot of dispatch, which is heavier?
+
+```{r fileBacked_random, cache=T, fig.height=3, fig.width=3, message = FALSE, warning = FALSE }
+(function(){
+ufo <- ufo_integer_bin(stats$stats_seq_ints$path, read_only=FALSE)
+ufo.ro <- ufo_integer_bin(stats$stats_seq_ints$path, read_only=TRUE)
+altrep <- altrep_ufo_integer_bin(stats$stats_seq_ints$path)
+
+result <- microbenchmark(
+  # R is rather slow with element-wise access
+  #  use the smaller sample size and run it a fewer times
+  "UFO" = { 
+    for (i in sample(size, sample_size)) some_function(ufo[i])
   },
+  "UFO/RO" = {
+    for (i in sample(size, sample_size)) some_function(ufo.ro[i])
+  },
+  "ALTREP" = {
+    for (i in sample(size, sample_size)) some_function(altrep[i])
+  },
+  times = 10L
+)
+
+plot <- autoplot(result) +
+  ggtitle("File-backed/32M seq/random access")+
+  theme_minimal() 
+
+})()
+```
+
+AltRep is much heavier than the UFOs in this case.
+
+## In-memory Arrays
+
+Loading things from disk is perhaps not always good comparison, however.
+There are cases where the object would be held in memory but can't be because it is too large.
+So now we will compare against a normal in-memory R vector
+
+### Sum
+```{R inMemory_sum, cache=T, fig.height=3, fig.width=3, message = FALSE, warning = FALSE}
+(function(){
+ufo <- ufo_integer_seq(1, size, 1, read_only = FALSE)
+ufo.ro <- ufo_integer_seq(1, size, 1, read_only = TRUE)
+vec <- as.integer(c(1:size))
+
+result <- microbenchmark(
+  # R is rather slow with element-wise access
+  #  use the smaller sample size and run it a fewer times
+  "UFO" = { sum(ufo) },
+  "UFO/RO" = { sum(ufo.ro) },
+  "R Vector" = { sum(vec) },
   times = 100L
 )
 
-all_data <- rbind(all_data, tibble(
-  benchmark="File-backed/32M seq/sum", 
-  framework=as.character(result$expr),
-  time=result$time,
-))
+plot <- autoplot(result) +
+  ggtitle("In Memory/32M seq/random access")+
+  theme_minimal() 
+})()
+```
+
+UFOs are very comparable to plain R vectors.
+They have a longer tail of long running instances for things like GC and
+  Kernel thread scheduling, but most runs are in the same range as plain vectors
+
+### Random Access
+
+Random access will be slower again, but how does UFOs compare?
+
+UFOs need to load and unload chunks to stay under the 2MB high-water mark for memory use
+doing random reads accross 128MB. How does it compare to normal vector accesses?
+
+```{R inMemory_random, cache=T, fig.height=3, fig.width=3, message = FALSE, warning = FALSE }
+(function(){
+ufo <- ufo_integer_seq(1, size, 1, read_only = FALSE)
+ufo.ro <- ufo_integer_seq(1, size, 1, read_only = TRUE)
+vec <- as.integer(c(1:size))
+
+result <- microbenchmark(
+  # R is rather slow with element-wise access
+  #  use the smaller sample size and run it a fewer times
+  "UFO" = { 
+    for (i in sample(size, sample_size)) some_function(ufo[i])
+  },
+  "UFO/RO" = {
+    for (i in sample(size, sample_size)) some_function(ufo.ro[i])
+  },
+  "R Vector" = {
+    for (i in sample(size, sample_size)) some_function(vec[i])
+  },
+  times = 10L
+)
 
 plot <- autoplot(result) +
-  #scale_y_continuous(labels = scales::label_number_si()) +
-  #xlab("time [ns]") +
-  ggtitle("File-backed/32M seq/sum")+
+  ggtitle("In Memory/32M seq/random access")+
   theme_minimal() 
-
-plot_to_pdf_and_here("32M_seq_bin_sum.pdf", plot)
+})()
 ```
+
+Random access tells a similar story as sums when comparing to R vectors
+
+Comparing to R Vectors shows that UFOs have very little overhead even compared to
+  completly native structures
