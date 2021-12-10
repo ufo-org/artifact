@@ -151,12 +151,8 @@ Each of these functions requires a path to a binary file. Our example binary
 file at path `../data/100K_seq_int.bin` contains 100,000 32-bit consecutive
 little-endian-encoded integer values requiring around 25MB of memory , ie:
 
-```
-00 00 00 00  01 00 00 00  02 00 00 00  03 00 00 00  
-04 00 00 00  05 00 00 00  06 00 00 00  07 00 00 00  
-08 00 00 00  09 00 00 00  0A 00 00 00  0B 00 00 00  
-0C 00 00 00  0D 00 00 00  0E 00 00 00  0F 00 00 00  
-...          ...          ...          ...
+```{bash}
+hexdump -x ../data/10M_seq_int.bin | head
 ```
 
 Construct a UFO using the integer version constructor. 
@@ -192,13 +188,7 @@ bin_vector[1:10]
 
 Once we access an element, the framework allocates and populates a chunk-sized of and
 asks its source to populate it. Since the source is a binary file, a chunk of
-the file is read into memory. The bytes read from disk are interpreted as 4-byte integer values:
-
-```
-00 00 00 00  01 00 00 00  02 00 00 00  03 00 00 00  # 0 1 2 4
-04 00 00 00  05 00 00 00  06 00 00 00  07 00 00 00  # 4 5 6 7
-08 00 00 00  09 00 00 00                            # 8 9
-```
+the file is read into memory. The bytes read from disk are interpreted as 4-byte integer values.
 
 If we access some more elements again, this data is actually in memory and no
 more loading takes place. Accessing values from outside the loaded chunk will
@@ -224,7 +214,14 @@ original file.
 Vectors can be written to.
 
 ```{r}
-bin_vector[1] <- 15;
+f <- function() {
+  x <- ufo_integer_bin("../data/10M_seq_int.bin", min_load_count=1000)
+  x[1] <- as.integer(15)
+}
+# Note: We have to wrap this in a function to prevent rstudio from grabbing 
+# references to the UFOs and forcing them to be copied on write. This does not 
+# happen in ordinary R programs.
+f()
 ```
 
 This chunk is now dirty. If it is subsequently unloaded due to memory pressure,
@@ -236,7 +233,15 @@ demonstrate that the value at index 1 is the same (index 100 in the reversed
 vector).
 
 ```{r}
-bin_vector[rev(seq.int(1, length(bin_vector), 100000))]
+f <- function() {
+  x <- ufo_integer_bin("../data/10M_seq_int.bin", min_load_count=1000)
+  x[1] <- as.integer(15)
+  x[rev(seq.int(1, length(x), 100000))]
+}
+# Note: We have to wrap this in a function to prevent rstudio from grabbing 
+# references to the UFOs and forcing them to be copied on write. This does not 
+# happen in ordinary R programs.
+f()
 ```
 
 In addition, these file-backed UFOs have writeback. This means that the modified
@@ -247,27 +252,25 @@ We remove the vector and turn on R's garbage collector to remove all chunks from
 memory, forcing the writeback fucntion to fire.
 
 ```{r}
-rm(bin_vector)
+# rm(x)
 gc()
 ```
 
 At this point, when inspected (e.g. with `hexedit`) the file will contain a 15
 in place of a 0 integer at the initial position.
 
-```
-0F 00 00 00  01 00 00 00  02 00 00 00  03 00 00 00  
-04 00 00 00  05 00 00 00  06 00 00 00  07 00 00 00  
-08 00 00 00  09 00 00 00  0A 00 00 00  0B 00 00 00  
-0C 00 00 00  0D 00 00 00  0E 00 00 00  0F 00 00 00  
-...          ...          ...          ...
+```{bash}
+hexdump -x ../data/10M_seq_int.bin | head
 ```
 
 Let us restore the vector to the original state.
 
 ```{r}
-bin_vector <- ufo_integer_bin("../data/10M_seq_int.bin", min_load_count=1000)
-bin_vector[1] <- 0;
-rm(bin_vector)
+cleanup <- function() {
+  x <- ufo_integer_bin("../data/10M_seq_int.bin", min_load_count=1000)
+  x[1] <- as.integer(0)
+}
+cleanup()
 gc()
 ```
 
@@ -430,7 +433,7 @@ portion of the data, parsing the data, and writing it into the vector.
 We provide a sample database `ufos` containing a table called `example`:
 
 ```{bash}
-echo "select * from example limit 10" | psql -U $USER -d ufos
+echo "select * from example where id <= 10" | psql -U $USER -d ufos
 ```
 
 We can create UFO vectors accessing contents of individual table columns.
@@ -444,7 +447,14 @@ psql_numeric[1:10]
 The writeback function updates the contents of the database:
 
 ```{r}
-psql_numeric[1] <- psql_numeric[1] - 1
+f <- function() {
+  psql_numeric <- ufo_psql(db_connection_string, table="example", column="numeric")
+  psql_numeric[1] <- psql_numeric[1] + 1
+}
+# Note: We have to wrap this in a function to prevent rstudio from grabbing 
+# references to the UFOs and forcing them to be copied on write. This does not 
+# happen in ordinary R programs.
+f()
 ```
 
 We remove the vector and turn on R's garbage collector to remove all chunks from
@@ -458,7 +468,7 @@ gc()
 Database contents after update:
 
 ```{bash}
-echo "select * from example limit 10" | psql -U $USER -d ufos
+echo "select * from example where id <= 10" | psql -U $USER -d ufos
 ```
 
 We currently do not support string columns, because of a fight we are having

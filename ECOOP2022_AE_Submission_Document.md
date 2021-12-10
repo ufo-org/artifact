@@ -8,18 +8,19 @@ ECOOP submission number for the paper: 7
 The artifact comprises of 
 * `README.md`                           a Markdown document containig a general description, basic instructions, and table of contents
 * `/experiments/`                       interactive R Markdown notebooks for repeating the experiments in the paper and re-generating graphs
-* `/experiments/membench.Rmd`           memory usage experiment 
-* `/experiments/benchmark.Rmd`          performance benchmarks
+* `/experiments/benchmark.Rmd`          performance benchmarks (Fig. 12 in the paper)
+* `/experiments/demo.Rmd`               quick running demonstration version of the `/experiments/benchmark.Rmd`
+* `/experiments/membench.Rmd`           memory usage experiment (Fig. 3 in the paper)
 * `/vignettes/`                         interactive R Markdown notebooks showing how to use the UFO framework in R and C
   * `/vignettes/ufo-r-vectors.Rmd`      tutorial on using existing implementations of UFO vectors in R
   * `/vignettes/ufo-r-programming.Rmd`  tutorial on creating a custom UFO backend in R
 * `/data/`                              data files for running the examples in `experiments` and `/vignettes`, and to play around with:
-  * `/data/{1K,100K,1M,10M,100M,250M}_seq_int.bin`                  binary files containing an array of integers, whose values start at 0 and increase by one
-  * `/data/{1K,100K,1M,10M,100M,250M}_ones_int.bin`                 a binary file containing an array of integers, all of the value of 1, sizes like above
-  * `/data/{1K,100K,1M,10M,100M,250M}_rand_int.bin`                 a binary file containing an array of integers with randomly generated values
-  * `/data/{1K,100K,1M,10M,100M,250M}_{seq,ones,rand}_int.bin.bz2`  BZip2-compressed versions of the above (`900K` block size)
-  * `/data/generate_examples.sh`        a script for re-generating the data files
-  * `/data/generate_psql.sh`            a script for generating and populating a postgres database
+  * `/data/{1K,100K,1M,10M,250M}_seq_int.bin`            binary files containing an array of integers, whose values start at 0 and increase by one
+  * `/data/{1K,100K,1M,10M,250M}_rand_int.bin`           a binary file containing an array of integers with randomly generated values
+  * `/data/{1K,100K,1M,10M,250M}_{seq,rand}_int.bin.bz2` BZip2-compressed versions of the above (`900K` block size)
+  * `/data/generate_examples.sh`        a bash script for re-generating the data files
+  * `/data/generate_psql.sh`            a bash script for generating and populating an example postgres database
+  * `/data/generate_csv.sh`             a bash script for generating and populating an example CSV file
 * `/projects/`                          source code of the frameworks described in the paper (each project contains compilation instructions in a `README.md` file)
   * `/projects/ufo-core`                source code of the UFO core framework (Rust project)
   * `/projects/ufo-c`                   source code of UFO C bindings (Rust project generating C headers)
@@ -27,6 +28,7 @@ The artifact comprises of
   * `/projects/ufo-r-vectors`           source code of a library of UFO implementations of R vectors (C/R project)
   * `/projects/altrep`                  source code a library of ALTREP reimplmenetations of some UFOs (C/R project), used in `/experiments/benchmark.Rmd`
   * `/projects/membench`                source code of a memory bechmark for UFOs, used in `/experiments/membench.Rmd`
+  * `/projects/viewports`               source code of an auxiliary R package for subsetting R vectors, a dependency for `/projects/ufo-r-vectors`
 
 The VM containing the artifact runs xubuntu linux and comes with the following packages installed of:
 * postgresql v. with a schema described in `/data/generate_psql.sh`
@@ -62,7 +64,7 @@ Functional evaluation of claims:
 * In Fig 3. the paper shows that the memory management implemented within UFOs
   keeps memory usage at a level specified by the high water mark, regardless of
   the collective size of live UFO objects. We show that dirty chunks are backed
-  onto a file, contributing to increaing memory usage, and that when no chunks
+  onto a file, contributing to increasing memory usage, and that when no chunks
   are dirtied the disk usage remains constant.
 
   We provide a complete recreation of the experiment in
