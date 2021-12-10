@@ -1,0 +1,537 @@
+---
+title: "Using UFO Vectors in R"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using UFO Vectors in R}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+~~~ 
+Note:
+
+This is an R markdown document. It is like a markdown document, but has
+executable snippets of code in in R and bash. It can be viewed using vscode or
+RStudio, e.g.:
+
+    rstudio ufo-r-vectors.Rmd
+
+There, each chunk can be executed via a button over the code. All paths in this
+file are relative to the location of the file, so set the session's working
+directory to the source file in rstudio before running the snippets:
+
+    Session -> Set working directory -> To source file location
+
+The file can also be executed (in whole) with R using the following bash
+snippet:*
+ 
+    Rscript -e "rmarkdown::render('ufo-r-vectors.Rmd')"
+
+This will compile the document into HTML while executing all the code snippets
+in the document. 
+~~~
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "# "
+)
+```
+
+# Overview
+
+Package *ufovectors* is an example implementation of R vectors using Userfault
+Objects (UFOs) from the *ufos* package. UFOs allow our R vectors to be lazily
+loaded into memory on demand from an arbitrary *source*. UFO vectors can be
+larger than memory, with data being transparentl loaded from source on demand
+and unloaded as needed.
+
+Package *ufovectors* provides a sample implementations of multiple UFO backends:
+
+```r
+# Large from-to-by sequences
+ufo_integer_seq   <- function(from, to, by, ...) #
+ufo_numeric_seq   <- function(from, to, by, ...) #
+
+# File-backed vectors (a la mmap)
+ufo_integer_bin   <- function(path, ...) #
+ufo_numeric_bin   <- function(path, ...) #
+ufo_complex_bin   <- function(path, ...) #
+ufo_logical_bin   <- function(path, ...) #
+ufo_raw_bin       <- function(path, ...) #     
+
+# File-backed vectors, but the file is compressed
+ufo_integer_bz2   <- function(path, ...) #
+ufo_numeric_bz2   <- function(path, ...) #
+ufo_complex_bz2   <- function(path, ...) #
+ufo_logical_bz2   <- function(path, ...) #
+ufo_raw_bz2       <- function(path, ...) #
+ufo_character_bz2 <- function(path, ...) #
+
+# Composition of multiple vectors
+ufo_bind          <- function(...)                            #
+
+# Write protection wrapper
+ufo_write_protect <- function(vector, ...)                    #
+
+# Vector backed by a database column
+ufo_psql          <- function(db, table, column, ...)         #
+
+# A data.frame of vectors backed by a CSV file
+ufo_csv           <- function(path, check_names, header, ...) #
+
+# Empty larger-than-memory vectors
+ufo_integer       <- function(size, populate_with_NAs, ...) #
+ufo_numeric       <- function(size, populate_with_NAs, ...) #
+ufo_complex       <- function(size, populate_with_NAs, ...) #
+ufo_logical       <- function(size, populate_with_NAs, ...) #
+ufo_raw           <- function(size,                    ...) #
+ufo_character     <- function(size, populate_with_NAs, ...) #
+```
+
+All constructors can be configured with a `min_load_count` flag specifying the
+chunk size of a UFO in terms of elements, and a `read_only` flag, which turns on
+write-protection. The size of the chunk depends must be at least a page of
+memory. Example:
+
+```r
+ufo_integer_seq(1, 100000, 1, read_only=TRUE, min_load_count=4096)
+```
+
+# Installation
+
+The UFO framework comes as two packages: `ufos` and `ufovectors`. The former
+contains a general framework for implementing programmable memory objects,
+whereas the latter is a library of example implementationsof larger-than-memory
+vectors. Install both form source via:
+
+```bash
+R CMD INSTALL --preclean ../projects/ufo-r 
+R CMD INSTALL --preclean ../projects/ufo-r-vectors
+```
+
+# Basic usage
+
+We show basic usage of the UFO framework.
+
+## Loading the library
+
+Once in R, load the UFO vector library into your program:
+
+```{r}
+options(ufos.high_water_mark_mb=2, ufos.low_water_mark_mb=1)
+library(ufovectors)
+```
+
+This also loads the `ufos` and package as a dependency, as well as a `viewports`
+package used to do custom subsetting on UFOs.
+
+It is possible to optionally specify a high and low watermark for the framework.
+The high water mark is the maximum memory that can be devoted to holding
+materialized chunks in memory. The low water mark is the amount of memory the
+chunk GC will retrain when it unloads chunks. The values are given in MB and are
+set here to 2MB and 1MB, respectively. This is purposefully set low for
+demonstration purposes. They are set to 2048MB and 1024MB by default.
+
+When UFOs are loaded, the UFO framework thread is automatically started. When
+the library is unloaded or the runtime is closed, the UFO runtime cleans up
+after itself, and shuts down.
+
+## Constructing a vector
+
+The *ufovectors* package provides constructors for various types of vectors:
+
+* `ufo_integer_bin (path)`
+* `ufo_numeric_bin (path)`
+* `ufo_logical_bin (path)`
+* `ufo_complex_bin (path)`
+* `ufo_raw_bin (path)`
+
+Each of these functions requires a path to a binary file. Our example binary
+file at path `../data/100K_seq_int.bin` contains 100,000 32-bit consecutive
+little-endian-encoded integer values requiring around 25MB of memory , ie:
+
+```{bash}
+hexdump -x ../data/10M_seq_int.bin | head
+```
+
+Construct a UFO using the integer version constructor. 
+
+```{r}
+bin_vector <- ufo_integer_bin("../data/10M_seq_int.bin", min_load_count=1000)
+```
+
+This reads the data from the binary file and interprets it as an integer vector
+containing the values `0:100000`.
+
+When we execute this function the R interpreter asks the UFO framework to
+allocate some memory using a custom allocator that will be used to store a
+vector. However, instead of allocating any of the vector within the process
+memory, UFOs are created as a memory mapped area of memory without a mapping to
+any physical memory resources, so without contents. This means that initially
+the vectors appears to the R runtime as a memory object taking up 40MB of
+memory, whereas, the actual physical meomry used is close to zero.
+
+## Accessing the vector
+
+Whenever that memory is accesed, the operating system passes on a request to the
+UFO system to allocate and populate a chunk within the mapped memory area. When
+that happens, the UFO framework calls a populate function, which, in this case,
+will load the data from the binary file. We set the chunk size to `1000`
+elements via the `min_load_count` parameter. If not set, the default is as many
+elements as fit within 1MB of memory.
+
+Access elements of the vector as follows.
+```{r ufovectors-poke-int-vector}
+bin_vector[1:10]
+```
+
+Once we access an element, the framework allocates and populates a chunk-sized of and
+asks its source to populate it. Since the source is a binary file, a chunk of
+the file is read into memory. The bytes read from disk are interpreted as 4-byte integer values.
+
+If we access some more elements again, this data is actually in memory and no
+more loading takes place. Accessing values from outside the loaded chunk will
+cause more chunks to be loaded.
+
+# GC and writeback
+
+When the memory used by materialized chunks reaches the high water mark, the UFO
+framework garbage collects least recently loaded chunks until the low water mark
+is reached. We show this in `../experiments/membench.Rmd`.
+
+The behavior can be triggered with a scan. We will access every 100,000th elemnt
+of the vector.
+
+```{r}
+bin_vector[seq.int(1, length(bin_vector), 100000)]
+```
+
+As more new chunks are unloaded, old chunks are unbloaded, to maintain bounded
+memory usage. When these chunks are accessed again, they are loaded from the
+original file.
+
+Vectors can be written to.
+
+```{r}
+f <- function() {
+  x <- ufo_integer_bin("../data/10M_seq_int.bin", min_load_count=1000)
+  x[1] <- as.integer(15)
+}
+# Note: We have to wrap this in a function to prevent rstudio from grabbing 
+# references to the UFOs and forcing them to be copied on write. This does not 
+# happen in ordinary R programs.
+f()
+```
+
+This chunk is now dirty. If it is subsequently unloaded due to memory pressure,
+its value will be stored internally on disk by the UFO framework and
+subsequently always read from that source instead. 
+
+It will not be forgotten though. We perform a reverse scan over the vector to
+demonstrate that the value at index 1 is the same (index 100 in the reversed
+vector).
+
+```{r}
+f <- function() {
+  x <- ufo_integer_bin("../data/10M_seq_int.bin", min_load_count=1000)
+  x[1] <- as.integer(15)
+  x[rev(seq.int(1, length(x), 100000))]
+}
+# Note: We have to wrap this in a function to prevent rstudio from grabbing 
+# references to the UFOs and forcing them to be copied on write. This does not 
+# happen in ordinary R programs.
+f()
+```
+
+In addition, these file-backed UFOs have writeback. This means that the modified
+values are written back to the originalbinary file. This happens when a dirty
+chunk is unloaded.
+
+We remove the vector and turn on R's garbage collector to remove all chunks from
+memory, forcing the writeback fucntion to fire.
+
+```{r}
+# rm(x)
+gc()
+```
+
+At this point, when inspected (e.g. with `hexedit`) the file will contain a 15
+in place of a 0 integer at the initial position.
+
+```{bash}
+hexdump -x ../data/10M_seq_int.bin | head
+```
+
+Let us restore the vector to the original state.
+
+```{r}
+cleanup <- function() {
+  x <- ufo_integer_bin("../data/10M_seq_int.bin", min_load_count=1000)
+  x[1] <- as.integer(0)
+}
+cleanup()
+gc()
+```
+
+## Operators
+
+UFOs attempt to be feature complete and as transparent as possible. A typical
+use of vectors involves setting and getting values form them as well as
+performing vectorized operations.
+
+Here we create a vector representing a sequence of integers between 1 and
+100,000 and adding one to each element:
+
+```{r}
+s <- ufo_integer_seq(1, 100000);
+is_ufo(s)
+```
+
+```{r}
+s <- s + 1
+is_ufo(s)
+```
+
+This will cause R to copy the contents of the UFO over to a new vector, which
+will not be a UFO. This can cause the memory to blow out, if the UFO was large.
+To prevent this, the UFO R vectors library provides a suite of operators that
+return the results of operations on UFO vectors as file-backed vectors. The
+contents of these vectors will be transparently stored in persistent memory
+mapped storage. This will cause an increase in disk usage while the UFO is live,
+but will prevent process memory from being blown out. The disk space will be
+reclaimed when the UFO is garbage collected.
+
+To turn on custom UFO operators, load the library with the option `add_class`.
+
+```{r}
+# Unload first, otherwise options will not be updated.
+detach("package:ufovectors", unload=TRUE)
+
+# Load the library
+options(ufos.high_water_mark_mb=2, ufos.low_water_mark_mb=1)
+options(ufovectors.add_class = TRUE)
+library(ufovectors)
+```
+
+First of all, this adds a class attribute to all UFO vectors: 
+
+```{r}
+s <- ufo_integer_seq(1, 100000);
+is_ufo(s)
+class(s)
+```
+
+The now class-conscious UFO can will perform S3 generic calls on operators,
+redirecting the call to a set of useful operators that return
+larger-than-memory--capable UFOs.
+
+```{r}
+s <- s + 1
+is_ufo(s)
+```
+
+If adding a class to the UFO breaks the transparency too much, UFOs can also be
+made to override default operators instead of being plugged into the S3 system.
+
+```r
+options(ufovectors.overload_operators = TRUE)
+```
+
+While we attempt to mitigate any potential problems, this approach is more
+dangerous than the S3 approach, since the override will apply to all operators
+and may lead to unexpected problems down the line for other objects.
+
+# Guided tour of UFO vector types
+
+There are a few examples of UFO vectors that represent proof of concept
+implementations of a number of common use cases for larger-than-memory vectors.
+
+## BZip2 file-backed vectors
+
+These vectors in essence work just like the file-backed vectors we showed above.
+However, the vectors are compressed on disk, and decompressed on-the-fly. This
+shows that UFOs can expand on the functionality of frameworks using `mmap`
+without the user fault mechanism as a backend by applying a transparent
+transformation to the data.
+
+```{r}
+bz2_vector <- ufo_integer_bz2("../data/10M_seq_int.bin.bz2", min_load_count=1000)
+bz2_vector[1:10]
+```
+
+We do not provide a writeback function, since after a block were decompressed
+and re-compressed it could change size and require realigning all following
+blocks in a file.
+
+## CSV file-backed vectors
+
+This backend parses a CSV file and extracts each column into a separate R
+vector. The constructor performs an initial scan of the CSV file discovering
+columns and inductively determining their types and lengths. The constructor
+also makes an index of offsets that helps find clean starting points for parsing
+individual chunks, without the need to parse from the start every time. 
+
+The data contains an example CSV file containing four columns:
+
+```
+integer,logical,numeric,string
+0,      TRUE,   0,      A
+1,      FALSE,  .20,    B
+2,      NULL,   .40,    C
+3,      TRUE,   .60,    D
+4,      FALSE   .80,    E
+5,      NULL,   1.00,   F
+```
+
+The CSV file is read into a series of vectors on the fly once the UFO is created
+via a constructor.
+
+```{r}
+csv <- ufo_csv("../data/example.csv")
+```
+
+ The vectors representing columns are parts of a standard data.frame, and can be accessed via typical R methods.
+
+```{r}
+csv$integer[1:10]
+```
+
+While its technically possible to implement a writeback function for CSVs, we
+currently do not do so, since CSV is a format that is particularly hostile
+format to writes in the middle of the file.
+
+## Row bind
+
+The backend produces a logical concatenation two or more other vectors without
+creating a copy. The data is looked up in the parent vectors when it is accessed
+in the bound vector. The constructor accepts a lists of vectors to bind into a
+single vector. The populate function then calculates the mapping between the
+indices of the bound vector and the individual elements within the parent vector
+and retrieves the appropriate values, including on-the-fly value coersion into a
+supertype.
+
+```{r}
+vector_1 <- as.integer(1:10)
+vector_2 <- as.numeric(1:10) + 0.5
+vector_3 <- c(T,F,NA)
+
+vector_123 <- ufo_bind(vector_1, vector_2, vector_3)
+vector_123[1:23]
+```
+
+We do not provide write-back.
+
+## PostgreSQL
+
+This backend retrieves data directly from a database. It represents a use of
+programmable memory objects as database view or a form of object relational
+mapping.  The constructor gathers parameters for a database connection and a
+query. The populate function executes a transaction retrieving a chunk-sized
+portion of the data, parsing the data, and writing it into the vector.
+
+We provide a sample database `ufos` containing a table called `example`:
+
+```{bash}
+echo "select * from example where id <= 10" | psql -U $USER -d ufos
+```
+
+We can create UFO vectors accessing contents of individual table columns.
+
+```{r}
+db_connection_string <- paste0("dbname = ufos user = ", Sys.getenv("USER"))
+psql_numeric <- ufo_psql(db_connection_string, table="example", column="numeric")
+psql_numeric[1:10]
+```
+
+The writeback function updates the contents of the database:
+
+```{r}
+f <- function() {
+  psql_numeric <- ufo_psql(db_connection_string, table="example", column="numeric")
+  psql_numeric[1] <- psql_numeric[1] + 1
+}
+# Note: We have to wrap this in a function to prevent rstudio from grabbing 
+# references to the UFOs and forcing them to be copied on write. This does not 
+# happen in ordinary R programs.
+f()
+```
+
+We remove the vector and turn on R's garbage collector to remove all chunks from
+memory, forcing the writeback fucntion to fire.
+
+```{r}
+rm(psql_numeric)
+gc()
+```
+
+Database contents after update:
+
+```{bash}
+echo "select * from example where id <= 10" | psql -U $USER -d ufos
+```
+
+We currently do not support string columns, because of a fight we are having
+with the runtime's allocator.
+
+## Sequences
+
+The from-to-by sequence implementation produces a from-to-by sequences as an
+example of a UFO generating values from a sequence or formula rather than from
+an external source. The from-to-by sequence is a common type of vector in use in
+R programs. It is a vector containing a sequence of integers in a specific range
+with a specific interval between the elements. 
+
+```{r}
+s <- ufo_integer_seq(from=1, to=10000000, by=2); # a very large sequence
+```
+
+## Write protect
+
+This implementation creates a write-protected view of another vector.
+The vector contains all the data of the original vector without copying it. It
+is set to be write protected, to prevent any writes being executed on the
+vector, or set to private, to keep the updates from permeating back into the
+original vector. The constructor collects a pointer to an original vector, and
+the populate function retrieves data from it.
+
+```{r}
+original <- seq(1,1000,3)
+protected <- ufo_write_protect(original)
+protected[1:10]
+```
+
+The new vector is a "reference" of the original but can be modified, without impacting the original. 
+
+When new data is written into the new vector, the old vector is not copied in
+its entirety, as would normally be the case with R's copy-on-write semantics.
+Instead, only a small chunk is copied over, and this chunk becomes transparently
+file-backed to consrve memory.
+
+```{r}
+protected[1:10] <- 10:1
+protected[1:10]
+original[1:10]
+```
+
+## Empty vectors
+
+Finally, this backend provides temporary larger-than-memory vectors.
+They can be used by application programmers whenever a large R vector must be
+created to store the results of computation. As more chunks are written, more
+chunks dematerialize, and more disk is used, but the process does not run out of
+memory. The constructor is minimal and merely collects parameters of the vector
+such as length, type, and initial value. 
+
+```{r}
+empty_vector <- ufo_integer(100);
+empty_vector
+```
+
+The vector can be written into.
+
+```{r}
+empty_vector[1:10] <- 42
+```
+
+There is no writeback function.
