@@ -669,6 +669,16 @@ SEXP/*INTXP*/ myseq(SEXP/*INTXP*/ from, SEXP/*INTXP*/ to, SEXP/*INTXP*/ by) {
 }
 ```
 
+## Package installation
+
+The package can be installed into R via the commandline:
+
+```bash
+R CMD INSTALL myseq
+```
+
+Where `myseq` refers to the directory containing the project.
+
 ## Et voilà
 
 Now all the elements are in place. We can test our new vectors in R:
