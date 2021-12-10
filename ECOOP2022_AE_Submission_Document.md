@@ -20,16 +20,16 @@ The artifact comprises of
   * `/data/{1K,100K,1M,10M,100M,250M}_{seq,ones,rand}_int.bin.bz2`  BZip2-compressed versions of the above (`900K` block size)
   * `/data/generate_examples.sh`        a script for re-generating the data files
   * `/data/generate_psql.sh`            a script for generating and populating a postgres database
-* `/projects/`                          source code of the frameworks described in the paper (each project contains compilation instructions)
+* `/projects/`                          source code of the frameworks described in the paper (each project contains compilation instructions in a `README.md` file)
   * `/projects/ufo-core`                source code of the UFO core framework (Rust project)
   * `/projects/ufo-c`                   source code of UFO C bindings (Rust project generating C headers)
   * `/projects/ufo-r`                   source code of a framework for implementing R vectors as UFOs (C/R package)
   * `/projects/ufo-r-vectors`           source code of a library of UFO implementations of R vectors (C/R project)
-  * `/projects/altrep`                  source code a library of ALTREP reimplmenetations of some UFOs (C/R project), used in benchmarks
-  * `/projects/membench`                source code of 
+  * `/projects/altrep`                  source code a library of ALTREP reimplmenetations of some UFOs (C/R project), used in `/experiments/benchmark.Rmd`
+  * `/projects/membench`                source code of a memory bechmark for UFOs, used in `/experiments/membench.Rmd`
 
 The VM containing the artifact runs xubuntu linux and comes with the following packages installed of:
-* postgresql v. with a schema 
+* postgresql v. with a schema described in `/data/generate_psql.sh`
 * bzip2 v.
 * the R runtime v. with libraries:
   * dplyr
@@ -72,7 +72,7 @@ Functional evaluation of claims:
 
   The experiment uses the code at `/projects/membench`.
 
-* In addition the paper provides a suite of examples and instructions ofr
+* In addition the paper provides a suite of examples and instructions for
   creating new UFO backends to support the framework's usefullness in problem
   solving and as a tool for library implementers. These can be found in
   `/vignettes/ufo-r-vectors.Rmd` and `/vignettes/ufo-r-programming.Rmd` and use

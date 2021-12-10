@@ -1,5 +1,7 @@
 *
 !*/
 !*.rmd
+!*.Rmd
 !*.md
 !.gitignore
+
