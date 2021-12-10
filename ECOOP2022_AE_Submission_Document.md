@@ -6,7 +6,7 @@ ECOOP submission number for the paper: 7
 ## Overview: What does the artifact comprise?
 
 The artifact comprises of 
-* `README.md`                           a Markdown document containig a general description, basic instructions, and table of contents
+* `README.md`                           a Markdown document containig a general description, basic instructions, and table of contents (this file)
 * `/experiments/`                       interactive R Markdown notebooks for repeating the experiments in the paper and re-generating graphs
 * `/experiments/benchmark.Rmd`          performance benchmarks (Fig. 12 in the paper)
 * `/experiments/demo.Rmd`               quick running demonstration version of the `/experiments/benchmark.Rmd`
@@ -15,12 +15,12 @@ The artifact comprises of
   * `/vignettes/ufo-r-vectors.Rmd`      tutorial on using existing implementations of UFO vectors in R
   * `/vignettes/ufo-r-programming.Rmd`  tutorial on creating a custom UFO backend in R
 * `/data/`                              data files for running the examples in `experiments` and `/vignettes`, and to play around with:
-  * `/data/{1K,100K,1M,10M,250M}_seq_int.bin`            binary files containing an array of integers, whose values start at 0 and increase by one
-  * `/data/{1K,100K,1M,10M,250M}_rand_int.bin`           a binary file containing an array of integers with randomly generated values
-  * `/data/{1K,100K,1M,10M,250M}_{seq,rand}_int.bin.bz2` BZip2-compressed versions of the above (`900K` block size)
-  * `/data/generate_examples.sh`        a bash script for re-generating the data files
+  * `/data/generate_examples.sh`        a bash script for generating the binary and compressed data files used in `/vignettes/`
   * `/data/generate_psql.sh`            a bash script for generating and populating an example postgres database
   * `/data/generate_csv.sh`             a bash script for generating and populating an example CSV file
+  * [*generated*] `/data/{1K,100K,1M,10M,250M}_seq_int.bin`            binary files containing an array of integers, whose values start at 0 and increase by one
+  * [*generated*] `/data/{1K,100K,1M,10M,250M}_rand_int.bin`           a binary file containing an array of integers with randomly generated values
+  * [*generated*] `/data/{1K,100K,1M,10M,250M}_{seq,rand}_int.bin.bz2` BZip2-compressed versions of the above (`900K` block size)
 * `/projects/`                          source code of the frameworks described in the paper (each project contains compilation instructions in a `README.md` file)
   * `/projects/ufo-core`                source code of the UFO core framework (Rust project)
   * `/projects/ufo-c`                   source code of UFO C bindings (Rust project generating C headers)
@@ -30,13 +30,18 @@ The artifact comprises of
   * `/projects/membench`                source code of a memory bechmark for UFOs, used in `/experiments/membench.Rmd`
   * `/projects/viewports`               source code of an auxiliary R package for subsetting R vectors, a dependency for `/projects/ufo-r-vectors`
 
-The VM containing the artifact runs xubuntu linux and comes with the following packages installed of:
-* postgresql v. with a schema described in `/data/generate_psql.sh`
-* bzip2 v.
+We provide pre-generated companion `html` files for each `md` or `Rmd` file.
+
+The VM containing the artifact runs Xubuntu Linux and comes with the following
+packages installed:
+* postgresql 
+* bzip2 v. **TODO versions**
 * the R runtime v. with libraries:
   * dplyr
   * ggplot2
 * rstudio v.
+
+## Badges
 
 We claim the following badges for the artifact:
 * functional
@@ -111,10 +116,13 @@ convenience of access.
 
 ## Artifact Requirements
 
-**TODO**
-Please list any specific hardware or software requirements for accessing your artifact
-OVF/OVA format 
-VM specs: ram, memory
+The artifact is a virtual machine image in OVF 2.0 format. A virtual machine that supports it is required (e.g. VirtualBox >=2.2.0, or [others](https://en.wikipedia.org/wiki/Open_Virtualization_Format))
+
+OVF 2.0
+
+VM SPEC: 4G of RAM, 4 cores
+user requiremeemnt: 6g fo ram +, 4 cores
+30GB of disk space
 
 Benchmark performance results may be impacted by memory size, and memory and
 disk speeds. 
@@ -124,3 +132,8 @@ disk speeds.
 **TODO**
 Please briefly describe how to get started with your artifact.
 Alternatively, you can provide corresponding documentation in the locations listed under 3 (and state so here).
+
+user login is ubmitter
+user and root passwd is somethingEasy
+
+- generate data
