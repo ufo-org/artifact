@@ -189,19 +189,8 @@ provide:
 
 * **UFO vectors** (at `vignettes/ufo-r-vectors.Rmd`) provides a tutorial for
   using UFOs in R and a guided tour over existing backends. **We recommend using
-  this to get a feel for how UFOs are used.**  Before using this notebook, generate example data using 
-  `vignettes/`
+  this to get a feel for how UFOs are used.**  Before using this notebook,
+  generate example data using `vignettes/generating_data.Rmd`
 
 * **UFO programming** (at`vignettes/ufo-r-programming.Rmd`) provides a tutorial
   for writing new UFO backend implementations. 
-
-
-
-**TODO**
-Please briefly describe how to get started with your artifact.
-Alternatively, you can provide corresponding documentation in the locations listed under 3 (and state so here).
-
-user login is submitter
-user and root passwd is somethingEasy
-
-- generate data
