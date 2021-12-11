@@ -10,10 +10,10 @@ UFO_C_PATH=src/ufo_c
 # cargo will generate the output binaries for ufo-c either in a debug
 # subdirectory or a release subdirectory. We remember which.
 ifeq (${UFO_DEBUG}, 1)
-	CARGOFLAGS=+nightly build
+	CARGOFLAGS=build
 	LIB_SUBDIR=/target/debug
 else
-	CARGOFLAGS=+nightly build --release
+	CARGOFLAGS=build --release
 	LIB_SUBDIR=/target/release
 endif
 
