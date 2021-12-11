@@ -1,9 +1,10 @@
 *
 !*/
-!*data/*.sh
-!*data/*.c
+!data/*.sh
+!data/*.c
 !*.rmd
 !*.Rmd
 !*.md
 !.gitignore
+!img/*.png
 

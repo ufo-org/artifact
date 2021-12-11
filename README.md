@@ -27,8 +27,7 @@ The artifact comprises of:
   * `/projects/membench`                source code of a memory bechmark for UFOs, used in `/experiments/membench.Rmd`
   * `/projects/viewports`               source code of an auxiliary R package for subsetting R vectors, a dependency for `/projects/ufo-r-vectors`
 
-The root directory `/` refers to the home directory where the artifact lives,
-not system root.
+The root directory `/` above refers to the artifact root at `/home/submitter/workspace/artifact` (not system root).
 
 The VM containing the artifact runs Xubuntu Linux 21.10 and comes with the following
 packages pre-installed:
@@ -93,7 +92,7 @@ Functional evaluation of claims:
   The experiment uses the code at `/projects/membench`.
 
 * In addition the paper provides a suite of examples and instructions for
-  creating new UFO backends to support the framework's usefullness in problem
+  creating new UFO backends to support the framework's usefulness in problem
   solving and as a tool for library implementers. These can be found in
   `/vignettes/ufo-r-vectors.Rmd` and `/vignettes/ufo-r-programming.Rmd` and use
   data in `/data/` as well as the local postgres instance, database `ufos`.
@@ -102,7 +101,7 @@ Functional evaluation of claims:
 
 Reusability scenarios:
 
-* The benchmarks in `/experiemnts` are parameterized in terms of high and low
+* The benchmarks in `/experiements` are parameterized in terms of high and low
   watermarks, specifying how much memory UFOs can use, chunk sizes, and data
   size, allowing to experiment with the performance of various frameworks under
   differing conditions. We also provide scripts to generate additional data
@@ -130,7 +129,7 @@ convenience of access.
 ## Artifact Requirements
 
 The artifact is a virtual machine image in OVF 2.0 format. A virtual machine
-that supports it is required (e.g. VirtualBox >=2.2.0, or
+platform that supports OVF 2.0 is required (e.g. VirtualBox >=2.2.0, or
 [others](https://en.wikipedia.org/wiki/Open_Virtualization_Format)).
 
 The virtual machine is set to use 4GB of RAM and 4 processor cores. We recommend
@@ -148,7 +147,7 @@ default, but it will not survive a reboot.
 Our artifact is packaged as a VirtualBox V. Download the VM from:
 
 ```
-http://
+http://fleshthatthinks.com/MaaPA.tar.gz
 ```
 
 Then, use VirtualBox's *Import Appliance* feature, which adds the VM to the
@@ -173,13 +172,21 @@ documentation with a mixture of text and runnable code snippets, similar to
 jupyter notebooks for Python. They are all initially opened when the VM is
 started. 
 
+![](img/tabs.png)
+
 When working with R notebooks, to execute a particular code block you can either
 click on the green play icon above the block. 
 
-You can also execute multiple blocks via the *Run* menu:
+![](img/chunk.png)
+
+You can also execute multiple blocks via the *Run* menu.
+
+![](img/run.png)
 
 You can also *knit* an Rmd file. This will execute all of the blocks it contains
-and generate an HTML file with the text and results of the execution:
+and generate an HTML file with the text and results of the execution.
+
+![](img/knit.png)
 
 ### Contents
 
@@ -201,7 +208,7 @@ provide:
 * **UFO vectors** (at `vignettes/ufo-r-vectors.Rmd`) provides a tutorial for
   using UFOs in R and a guided tour over existing backends. **We recommend using
   this to get a feel for how UFOs are used.**  Before using this notebook,
-  generate example data using `vignettes/generating_data.Rmd`
+  generate example data using `vignettes/generating_data.Rmd`.
 
-* **UFO programming** (at`vignettes/ufo-r-programming.Rmd`) provides a tutorial
+* **UFO programming** (at `vignettes/ufo-r-programming.Rmd`) provides a tutorial
   for writing new UFO backend implementations. 
