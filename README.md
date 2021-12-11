@@ -40,7 +40,7 @@ packages pre-installed:
   * ggplot2,
   * microbenchmark,
   * scales,
-  * readr.
+  * readr,
 * rstudio.
 
 The artifact generates the following files during the course of its execution:
@@ -151,7 +151,7 @@ Our artifact is packaged as a VirtualBox V. Download the VM from:
 http://
 ```
 
-Then, use VirtualBox's *Implort Appliance* feature, which adds the VM to the
+Then, use VirtualBox's *Import Appliance* feature, which adds the VM to the
 list of your virtual machines. At this point you can also customize the number
 of CPUs and RAM used in the VM settings. The initial configuration is 4GB of RAM
 and 4 processor cores. We encourage to increase the number of cores to improve
