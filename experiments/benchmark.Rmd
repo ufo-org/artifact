@@ -1,0 +1,329 @@
+---
+title: "UFO Benchmarks"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+~~~ 
+Note:
+
+This is an R markdown document. It is like a markdown document, but has
+executable snippets of code in in R and bash. It can be viewed using vscode or
+RStudio, e.g.:
+
+    rstudio benchmark.Rmd
+
+There, each chunk can be executed via a button over the code. All paths in this
+file are relative to the location of the file, so set the session's working
+directory to the source file in rstudio before running the snippets:
+
+    Session -> Set working directory -> To source file location
+
+The file can also be executed (in whole) with R using the following bash
+snippet:*
+ 
+    Rscript -e "rmarkdown::render('benchmark.Rmd')"
+
+This will compile the document into HTML while executing all the code snippets
+in the document. 
+~~~
+
+# Introduction
+
+This notebook generates Fig. 12 from the paper. The figure consists of 6 graphs 
+which this notebook generates as 6 separate PDFs in subdirectory `fig`. There are 
+3 graphs for each  benchmarked back end: creation, sum, and loop. Description from 
+the paper follows:
+
+~~~
+
+The experiment benchmark sthe performance of some of the UFO backends. We compare their
+behavior to standard R objects, as well as ALTREP vectors. 
+
+The benchmark uses two back-ends. The binary file backend reads 4-byte integers from 
+a binary file and has a relatively high overhead when retrieving a single value, which is
+amortized when reading entire regions at once. The sequence backend
+generates a from-to-by sequence, and computing an individual element of the
+sequence is cheap. Both of these backends are implemented in both ALTREP and
+UFOs. Pains were taken to ensure that both implementations are equivilent, using
+the same system calls and techniques and sharing as much code as possible.
+
+We measured the time it takes to create a 1GB vector (1K iterations), calculate
+the sum of its contents (1K iterations), and execute an identity function on
+each of its elements (10 iterations).
+
+We test UFOs in two modes: read/write mode and read-only
+mode. Read-only mode does not persist changes done to UFOs, which removes the
+need to calculate hashes of segment contents when loading and unloading them.
+
+~~~
+
+# Setup
+
+Load libraries used to process data in this document:
+
+```{r}
+library(ufovectors)
+library(ufoaltrep)
+library(microbenchmark)
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(readr)
+```
+
+Create a few helper functions and do basic settings:
+
+```{r}
+plot_to_pdf_and_here <- function(path, data) {
+  pdf(paste0("figs/",path), width = 4, height = 4)
+  plot(data)
+  dev.off()  
+  plot(data)
+}
+
+dir.create("figs")
+
+some_function <- function(x) x
+
+ufo_set_debug_mode(F)
+options(scipen=999) # effectively turns off scientific notation
+
+SMALL_ITER=10
+BIG_ITER=1000
+```
+
+## Generating files
+
+The benchmark uses some on-disk data. We generate a file containing 250M 
+random integers (1M random integers repeated 250 times). 
+
+(Other configurations can be uncommented to created files containing sequences 
+or a single repeated value.)
+
+```{r}
+generate_binary_file <- function(path, range, repeats) {
+  sum <- 0
+  minimum <- integer(0)
+  maximum <- integer(0)
+  size <- length(range) * repeats
+  f <- file(path, "wb")
+  for (i in 0:repeats) {
+    writeBin(range, f)
+    sum <- sum + sum(range, na.rm = TRUE)
+    minimum <- min(minimum, range, na.rm = TRUE)
+    maximum <- max(maximum, range, na.rm = TRUE)
+  }
+  close(f)
+  list(path=path, sum=sum, size=size, min=minimum, max=maximum)
+}
+
+stats <- list(
+  #stats_1s = generate_binary_file("250M_1s.bin", as.integer(rep(1, 1000000)), 250), #126MB
+  #stats_seq_ints = generate_binary_file("250M_seq_ints.bin", 1:1000000, 250),
+  stats_rand_ints = generate_binary_file("../data/250M_rand_ints.bin", sample(1000000, replace=T), 250)
+)
+
+size <- 250 * 1000 * 1000
+```
+
+# File-backed vectors
+
+In this section we generate the three graphs for the file-backed vector implementation: UFO and ALTREP. 
+UFO vectors are set to read only or read/write. They read data from the binary file created above. 
+
+### Creation
+
+This snippet benchmarks vector creation. It iterates 1000 times. It takes seconds to execute.
+
+```{r}
+result <- microbenchmark(
+  "UFO"    = { ufo_integer_bin(stats$stats_rand_ints$path, read_only=FALSE) },
+  "UFO/RO" = { ufo_integer_bin(stats$stats_rand_ints$path, read_only=TRUE) },
+  "ALTREP" = { altrep_ufo_integer_bin(stats$stats_rand_ints$path) },
+  times = BIG_ITER
+)
+
+plot <- autoplot(result) +
+  ggtitle("File-backed/250M rand ints/create")+
+  theme_minimal() 
+
+plot_to_pdf_and_here("250M_rand_bin_create.pdf", plot)
+```
+
+### Sum
+
+This snippet benchmarks calculating a sum over the entire vector. It iterates 1000 times. It takes minutes to execute.
+
+```{r}
+ufo <- ufo_integer_bin(stats$stats_rand_ints$path, read_only=FALSE)
+ufo.ro <- ufo_integer_bin(stats$stats_rand_ints$path, read_only=TRUE)
+altrep <- altrep_ufo_integer_bin(stats$stats_rand_ints$path)
+
+result <- microbenchmark(
+  "UFO"    = { sum(ufo) },
+  "UFO/RO" = { sum(ufo.ro) },
+  "ALTREP" = { sum(altrep) },
+  times = BIG_ITER
+)
+
+plot <- autoplot(result) +
+  ggtitle("File-backed/250M rand ints/sum")+
+  theme_minimal() 
+
+plot_to_pdf_and_here("250M_rand_bin_sum.pdf", plot)
+```
+
+
+### For loop
+
+This snippet benchmarks vector creation. It iterates 10 times. It can take hours to execute.
+
+```{r}
+ufo <- ufo_integer_bin(stats$stats_rand_ints$path, read_only=FALSE)
+ufo.ro <- ufo_integer_bin(stats$stats_rand_ints$path, read_only=TRUE)
+altrep <- altrep_ufo_integer_bin(stats$stats_rand_ints$path)
+
+result <- microbenchmark(
+  "UFO"    = { for (e in ufo) some_function(e) },
+  "UFO/RO" = { for (e in ufo) some_function(e) },
+  "ALTREP" = { for (e in altrep) some_function(e) },
+  times = SMALL_ITER
+)
+
+plot <- autoplot(result) +
+  ggtitle("File-backed/250M rand ints/loop")+
+  theme_minimal() 
+
+plot_to_pdf_and_here("250M_rand_bin_loop.pdf", plot)
+```
+
+# Sequences
+
+In this section we generate the three graphs for the sequence implementation: UFO and ALTREP. 
+UFO vectors are set to read only or read/write. They read data from the binary file created above. 
+
+### Creation
+
+This snippet benchmarks vector creation. It iterates 1000 times. It takes seconds to execute.
+
+```{r}
+result <- microbenchmark(
+  "UFO"      = { ufo_integer_seq(1, size, 1, read_only = FALSE) },
+  "UFO/RO"   = { ufo_integer_seq(1, size, 1, read_only = TRUE) },
+  "ALTREP"   = { altrep_integer_seq(1, size, 1) },
+  "R vector" = { as.integer(c(1:size)) },
+  times = BIG_ITER
+)
+
+plot <- autoplot(result) +
+  ggtitle("Sequence/250M ints/create") +
+  theme_minimal() 
+
+plot_to_pdf_and_here("250M_seq_create.pdf", plot)
+```
+
+### Sum
+
+This snippet benchmarks vector creation. It iterates 1000 times. It takes seconds to execute.
+
+```r
+ufo <- ufo_integer_seq(1, size, 1, read_only = FALSE)
+ufo.ro <- ufo_integer_seq(1, size, 1, read_only = TRUE)
+altrep <- altrep_integer_seq(1, size, 1)
+vec.std <- as.integer(c(1:size))
+
+result <- microbenchmark(
+  "UFO"      = { sum(ufo) },
+  "UFO/RO"   = { sum(ufo.ro) },
+  "ALTREP"   = { sum(altrep) },
+  "R vector" = { sum(vec.std) },
+  times =  BIG_ITER
+)
+
+plot <- autoplot(result) +
+  ggtitle("Sequence/250M ints/sum")+
+  theme_minimal() 
+
+plot_to_pdf_and_here("250M_seq_sum.pdf", plot)
+```
+
+### For loop
+
+This snippet benchmarks vector creation. It iterates 10 times. It can take hours to execute.
+
+```{r}
+ufo <- ufo_integer_seq(1, size, 1, read_only = FALSE)
+ufo.ro <- ufo_integer_seq(1, size, 1, read_only = TRUE)
+altrep <- altrep_integer_seq(1, size, 1)
+vec.std <- as.integer(c(1:size))
+
+result <- microbenchmark(
+  "UFO"      = { for (e in ufo) some_function(e) },
+  "UFO/RO"   = { for (e in ufo.ro) some_function(e) },
+  "ALTREP"   = { for (e in altrep) some_function(e) },
+  "R vector" = { for (e in vec.std) some_function(e) },
+  times = SMALL_ITER
+)
+
+plot <- autoplot(result) +
+  ggtitle("Sequence/250M ints/loop")+
+  theme_minimal() 
+
+plot_to_pdf_and_here("250M_seq_loop.pdf", plot)
+```
+
+# Discussion
+
+The discussion of the experimental results from the paper:
+
+~~~
+
+We show the results of the evaluation in Fig. 12. Each plot
+shows the results for either the creation, sum, or loop microbenchmark. The top
+row shows results for the file-backed vectors, the bottom one for sequences. The
+Y-axis always shows vector implementations and the X-axis shows execution time.
+The results are shown as a violin plots showing the relative distribution of
+execution times over multiple iterations.
+
+We observe that UFOs and ALTREP have similar performance for vector creation
+and the execution time is negligibly small for both frameworks, with some
+outliers we attribute to initialization and garbage collection. The startup
+time is higher for R vectors implementing a sequence, because the vector must
+populated up front, as opposed to UFOs and ALTREP, which calculate these values
+on demand. This initialization cost for standard vectors could eventually be
+amortized over multiple passes over the vector.
+
+Sums over sequences yield similar performance for all frameworks. Sequences,
+being lightweight to calculate, would highlight any difference in implementation
+overhead, though little is observed. 
+%%
+For file-backed vectors UFOs and ALTREP also perform similarly.  The R runtime
+calculates the sum of a vector using a fast arithmetic function. This function
+cooperates with ALTREP to chunk the vector into regions, which allows ALTREP
+to amortize the overhead of preparing a file for reading and seeking.  While
+the R runtime does not similarly chunk the execution for UFOs, the UFO
+framework makes sure to read no less than 1MB of elements at-a-time and cache
+data, yielding a similar amortization. Thus, the performance for both
+frameworks is similar.  When the hashing mechanism is turned off for read-only
+UFO vectors, a significant overhead cost is removed for UFOs, yielding a small,
+but visible improvement in performance.
+
+An importance difference in performance between UFOs and ALTREP stems from the
+fact that ALTREP performs dynamic dispatch whenever values are accessed, be it
+a region or a single value. The R runtime attempts to turn individual value
+accesses into region accesses for ALTREP, but this can only works for specific
+operations. When the loop benchmark executes, it always executes a function on
+a single value from a vector, leading to repeated dispatch in ALTREP, and so,
+deteriorates performance significantly. UFOs also have set-up costs relating to
+loading data for an accessed value, however these costs are always amortized by
+loading an entire segment into memory. This gives UFOs an advantage over
+ALTREP's dispatch and produces performance close to ordinary vectors when
+consecutive elements are accessed. However, this approach is costly if
+the access pattern is spread out, causing the UFO to load and
+unload a segment for each single value read.
+
+~~~

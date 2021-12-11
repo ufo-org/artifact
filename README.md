@@ -33,13 +33,17 @@ The artifact comprises of
 We provide pre-generated companion `html` files for each `md` or `Rmd` file.
 
 The VM containing the artifact runs Xubuntu Linux and comes with the following
-packages installed:
-* postgresql 
-* bzip2 v. **TODO versions**
-* the R runtime v. with libraries:
-  * dplyr
-  * ggplot2
-* rstudio v.
+packages instslled:
+* postgresql,
+* bzip2,
+* the R runtime with additional libraries:
+  * dplyr,
+  * devtools,
+  * ggplot2,
+  * microbenchmark,
+  * scales,
+  * readr.
+* rstudio.
 
 ## Badges
 
@@ -116,24 +120,53 @@ convenience of access.
 
 ## Artifact Requirements
 
-The artifact is a virtual machine image in OVF 2.0 format. A virtual machine that supports it is required (e.g. VirtualBox >=2.2.0, or [others](https://en.wikipedia.org/wiki/Open_Virtualization_Format))
+The artifact is a virtual machine image in OVF 2.0 format. A virtual machine
+that supports it is required (e.g. VirtualBox >=2.2.0, or
+[others](https://en.wikipedia.org/wiki/Open_Virtualization_Format)).
 
-OVF 2.0
-
-VM SPEC: 4G of RAM, 4 cores
-user requiremeemnt: 6g fo ram +, 4 cores
-30GB of disk space
+The virtual machine is set to use 4GB of RAM and 4 processor cores. We recommend
+running it on a system that matches or exceeds these parameters. The virtual
+machine image takes up approximately 30 GB of disk space.
 
 Benchmark performance results may be impacted by memory size, and memory and
 disk speeds. 
 
 ## Getting Started
 
+Our artifact is packaged as a VirtualBox V. Download the VM from:
+
+```
+http://
+```
+
+Then, use VirtualBox's *Implort Appliance* feature, which adds the VM to the
+list of your virtual machines. At this point you can also customize the number
+of CPUs and RAM used in the VM settings. The initial configuration is 4GB of RAM
+and 4 processor cores. 
+
+Start the artifact. This boots Xubuntu 21.10. The system has the following user
+credentials configured:
+
+```
+username: submitter
+password: somethingEasy
+
+root password: somethingEasy
+```
+
+The artifact is self contained. It contains R markdown notebooks that are used
+to generate data and run experiments. These notebooks are interactive
+documentation with a mixture of text and runnable code snippets, similar to
+jupyter notebooks for Python. They are all initially opened when the VM is
+started. 
+
+
+
 **TODO**
 Please briefly describe how to get started with your artifact.
 Alternatively, you can provide corresponding documentation in the locations listed under 3 (and state so here).
 
-user login is ubmitter
+user login is submitter
 user and root passwd is somethingEasy
 
 - generate data

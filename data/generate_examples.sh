@@ -20,7 +20,6 @@ generate 1K             1000    # 3.9 KB
 generate 100K         100000    # 392 KB 
 generate 1M          1000000    # 3.8 MB
 generate 10M        10000000    # 38  MB
-generate 250M      250000000    #  ~1 GB
 #                   T  G  M  K  1   
 
 # Generate BZip2 examples
