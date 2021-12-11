@@ -1,9 +1,9 @@
-# Artifact Submission Template
+# README
 
 Title of the submitted paper: Memory as a programmable abstraction
 ECOOP submission number for the paper: 7
 
-## Overview: What does the artifact comprise?
+## Contents
 
 The artifact comprises of:
 * `README.md`                           a Markdown document containing a general description, basic instructions, and table of contents (this file)
@@ -60,9 +60,7 @@ We claim the following badges for the artifact:
 * reusable
 * available
 
-## For authors claiming a functional or reusable badge: What are claims about the artifact’s functionality to be evaluated by the committee?
-
-Functional evaluation of claims:
+### Functional evaluation of claims
 
 * The paper claims that programable memory abstractions have performance
   comparable to ALTREP and standard R vectors and outperform ALTREP's dynamic
@@ -97,9 +95,7 @@ Functional evaluation of claims:
   `/vignettes/ufo-r-vectors.Rmd` and `/vignettes/ufo-r-programming.Rmd` and use
   data in `/data/` as well as the local postgres instance, database `ufos`.
 
-## For authors claiming a reusable badge: What are the authors' claims about the artifact's reusability to be evaluated by the committee?
-
-Reusability scenarios:
+### Reusability scenarios
 
 * The benchmarks in `/experiements` are parameterized in terms of high and low
   watermarks, specifying how much memory UFOs can use, chunk sizes, and data
@@ -120,7 +116,7 @@ Reusability scenarios:
 * We provide usage examples for UFO R vectors which can be modified to explore
   their robustness and discover the limitations of the library.
 
-## For authors claiming an available badge
+### Availability
 
 We will publish the artifact on DARTS. In addition, we will plan to make the
 source code and scripts for generating data for the artifact on GitHub for
