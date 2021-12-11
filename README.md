@@ -8,9 +8,9 @@ ECOOP submission number for the paper: 7
 The artifact comprises of:
 * `README.md`                           a Markdown document containing a general description, basic instructions, and table of contents (this file)
 * `/experiments/`                       interactive R Markdown notebooks for repeating the experiments in the paper and re-generating graphs
-* `/experiments/benchmark.Rmd`          performance benchmarks (Fig. 12 in the paper)
 * `/experiments/demo.Rmd`               quick running demonstration version of the `/experiments/benchmark.Rmd`
 * `/experiments/membench.Rmd`           memory usage experiment (Fig. 3 in the paper)
+* `/experiments/benchmark.Rmd`          full performance benchmarks (Fig. 12 in the paper)
 * `/vignettes/`                         interactive R Markdown notebooks showing how to use the UFO framework in R and C
   * `/vignettes/ufo-r-vectors.Rmd`      tutorial on using existing implementations of UFO vectors in R
   * `/vignettes/ufo-r-programming.Rmd`  tutorial on creating a custom UFO backend in R
@@ -139,8 +139,8 @@ machine image takes up approximately 30 GB of disk space.
 Benchmark performance results may be impacted by memory size, and memory and
 disk speeds.
 
-The VM has to have `vm.unprivileged_userfaultfd` set to `1`. This is the case by
-default, but it will not survive a reboot.
+The VM has to have `vm.unprivileged_userfaultfd` set to `1`. This is set persistently
+in `/etc/sysctl.d/20-ufos.conf`
 
 ## Getting Started
 
