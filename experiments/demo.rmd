@@ -1,6 +1,5 @@
 ---
 title: "Demo"
-author: "submitter"
 output: html_document
 ---
 
@@ -52,24 +51,7 @@ plot_to_pdf_and_here <- function(path, data) {
 }
 ```
 
-### Libraries
-
-High and low water marks are configured when loading the library,
- we will set them to 2 and 1 megabytes respectively. This is very constrained,
- normally you would give UFOs several gigabytes to work with, but in this case we
- want to simulate a larger data set in limited time and space. It also shows how
- flexible the UFO system is even when the data is much larger than the memory
- available
-
 ```{r message = FALSE, warning = FALSE }
-# If you want to change the high and low water marks run this line first:
-# detach("package:ufovectors", unload=TRUE)
-
-# Set some very low memory bounds for UFOs
-# this will help to show UFO performance without long tests
-# units are megabytes
-options(ufos.high_water_mark_mb=2, ufos.low_water_mark_mb=1)
-
 # Load the library
 library(ufovectors)
 
@@ -111,13 +93,13 @@ generate_binary_file <- function(path, range, repeats) {
 
 stats <- list(
   # just a File Backed list of numbers 1-1M repeated 32 times to stand in for more interesting data
-  stats_seq_ints = generate_binary_file("../data/demo_32M_seq_ints.bin", 1:1000000, 32)
+  stats_seq_ints = generate_binary_file("data/demo_32M_seq_ints.bin", 1:1000000, 32)
 )
 ```
 
 ### Constants for sizes and sampling
 
-To keep the runtimes down and notr be too taxing on your computer we will only
+To keep the runtimes down and not be too taxing on your computer we will only
  use 128MB of data. When doing element-wise operations we will also be sub-sampling
  that data only 100,000 times. This allows more runs and nicer more accurate charts.
 
@@ -163,8 +145,8 @@ autoplot(result) +
 })()
 ```
 
-Performance is comparable on sums.
-Both a good job with this because of loading large chunks
+Performance favors alt-rep on sums,
+  though both a good job with this because of loading large chunks
 
 ### Random access
 
@@ -200,15 +182,12 @@ autoplot(result) +
 ```
 
 AltRep is much heavier than the UFOs in this case.
-Since we are reading randomly from the vectors AltRep loads elements singly while
- UFOs still loads chunks. UFOs will have to load and unload chunks in and out of its
- cache to keep with in the 2MB memory limit, but that still results in a win.
+Since we are reading randomly from the vectors AltRep loads elements singly while UFOs still loads chunks.
 
 ## In-memory Arrays
 
 Loading things from disk is perhaps not always a good comparison, however.
-There are cases where the object would be held in memory
- but can't be because it is too large.
+There are cases where the object would be held in memory but can't be because it is too large.
 So now we will compare against a normal in-memory R vector
 
 ### Sum
@@ -228,23 +207,18 @@ result <- microbenchmark(
 )
 
 autoplot(result) +
-  ggtitle("In Memory/32M seq/random access")+
+  ggtitle("In Memory/32M seq/sum")+
   theme_minimal() 
 })()
 ```
 
 UFOs are very comparable to plain R vectors.
-They have a longer tail of long running instances for things like GC and
-  Kernel thread scheduling, but most runs are in the same range as plain vectors
+They have a longer tail of long running instances for things like Kernel thread scheduling,
+ but most runs are in the same range as plain vectors
 
 ### Random Access
 
 Random access is harder on R, so this test is slower than sums, like above.
-
-R will have the entire vbector in-memory while UFOs need to load
- and unload chunks to stay under the 2MB high-water mark for memory use
- while doing random reads accross 128MB.
- How does it compare to normal vector accesses?
 
 ```{R inMemory_random, cache=T, fig.height=3, fig.width=3, message = FALSE, warning = FALSE }
 (function(){
