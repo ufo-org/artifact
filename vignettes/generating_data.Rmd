@@ -1,0 +1,127 @@
+
+---
+title: "Using UFO Vectors in R"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using UFO Vectors in R}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+~~~ 
+Note:
+
+This is an R markdown document. It is like a markdown document, but has
+executable snippets of code in in R and bash. It can be viewed using vscode or
+RStudio, e.g.:
+
+    rstudio generating_data.Rmd
+
+There, each chunk can be executed via a button over the code. All paths in this
+file are relative to the location of the file, so set the session's working
+directory to the source file in rstudio before running the snippets:
+
+    Session -> Set working directory -> To source file location
+
+The file can also be executed (in whole) with R using the following bash
+snippet:*
+ 
+    Rscript -e "rmarkdown::render('generating_data.Rmd')"
+
+This will compile the document into HTML while executing all the code snippets
+in the document. 
+~~~
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "# "
+)
+```
+
+The examples in this tutorial use a number of data sources, including CSV files,
+binary data files, compressed data files, and a PostgreSQL database. The data 
+sources can be (re-)generated via bash scripts in the `/data/` directory.
+
+The script can be edited to create different files.
+
+## Generating CSV files
+
+This script generates a CSV file at `../data/example.csv` containig four columns
+of four different types and 2000 rows. 
+
+```{bash}
+../data/generate_csv.sh > /dev/null #output is too big to show
+```
+
+Example contents:
+
+```{bash}
+head -n 5 ../data/example.csv
+```
+
+The script can be easily modifed to generate a different number of rows, 
+or experty modified to generate different column types.
+
+## Generating PostgreSQL tables
+
+Thsi script creates a PostgreSQL database for the current user on the 
+local instance and creates a table called `example` with three columns.
+The table is populated with 2000 rows of data. This takes a minute.
+
+```{bash messages}
+../data/generate_psql.sh > /dev/null #output is too big to show
+```
+
+Example contents:
+
+```{bash}
+echo "select * from example where id <= 10" | psql -U $USER -d ufos
+```
+
+## Generating binary data
+
+This script generates binary files and their BZip2-compressed counterparts. The 
+process takes a few minutes and generates ~3GB of data on disk. 
+
+```{bash}
+../data/generate_examples.sh
+```
+
+Generates files containing `1K`, `100K`, `1M`, `10M`, and `250M` 32-bit integers. 
+`seq` files contain monotonically growing sequencews of integers, and `rand` 
+files contain random values. The script should generate the following:
+
+```
+../data
+├── 100K_rand_int.bin
+├── 100K_rand_int.bin.bz2
+├── 100K_seq_int.bin
+├── 100K_seq_int.bin.bz2
+├── 10M_rand_int.bin
+├── 10M_rand_int.bin.bz2
+├── 10M_seq_int.bin
+├── 10M_seq_int.bin.bz2
+├── 1K_rand_int.bin
+├── 1K_rand_int.bin.bz2
+├── 1K_seq_int.bin
+├── 1K_seq_int.bin.bz2
+├── 1M_rand_int.bin
+├── 1M_rand_int.bin.bz2
+├── 1M_seq_int.bin
+├── 1M_seq_int.bin.bz2
+├── 250M_rand_int.bin
+├── 250M_rand_int.bin.bz2
+├── 250M_seq_int.bin
+└── 250M_seq_int.bin.bz2
+```
+
+Example contents:
+
+```{bash}
+hexdump -x ../data/1K_seq_int.bin | head -n 5
+```
+
+```{bash}
+hexdump -x ../data/1K_rand_int.bin | head -n 5
+```

@@ -110,6 +110,9 @@ R CMD INSTALL --preclean ../projects/ufo-r
 R CMD INSTALL --preclean ../projects/ufo-r-vectors
 ```
 
+The examples require pregenerated data. Instructions on generating data for 
+the examples can be found in [`/vignettes/generating_data.Rmd`](generating_data.Rmd).
+
 # Basic usage
 
 We show basic usage of the UFO framework.

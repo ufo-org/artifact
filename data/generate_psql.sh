@@ -5,7 +5,13 @@ sudo -u postgres sh -c "echo \"create user $USER; create database ufos; grant al
 echo "drop table if exists example cascade;" | psql -U $USER -d ufos
 
 # Create table
-echo "create table example (id serial primary key, integer int, logical boolean, numeric real);" | psql -U $USER -d ufos
+echo \
+    "create table example ( \
+        id serial primary key, \
+        integer int, \
+        logical boolean, \
+        numeric real\
+    );" | psql -U $USER -d ufos
 
 # Populate table
 for i in {0..2000}
@@ -15,5 +21,3 @@ do
     r=$(echo "scale=2; $i / 5" | bc)
     echo "insert into example (integer, logical, numeric) values ($i, $b, $r);" | psql -U $USER -d ufos
 done
-
-# v <- ufo_psql("dbname = ufos user = $USER", "example", "integer")
