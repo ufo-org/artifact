@@ -1,6 +1,7 @@
 *
 !*/
 !*data/*.sh
+!*data/*.c
 !*.rmd
 !*.Rmd
 !*.md

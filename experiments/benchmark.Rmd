@@ -92,8 +92,8 @@ some_function <- function(x) x
 ufo_set_debug_mode(F)
 options(scipen=999) # effectively turns off scientific notation
 
-SMALL_ITER=10
-BIG_ITER=1000
+SMALL_ITER=2
+BIG_ITER=10
 ```
 
 ## Generating files
