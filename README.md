@@ -24,7 +24,7 @@ The artifact comprises of:
   * `/projects/ufo-r`                   source code of a framework for implementing R vectors as UFOs (C/R package)
   * `/projects/ufo-r-vectors`           source code of a library of UFO implementations of R vectors (C/R project)
   * `/projects/altrep`                  source code a library of ALTREP reimplmenetations of some UFOs (C/R project), used in `/experiments/benchmark.Rmd`
-  * `/projects/membench`                source code of a memory bechmark for UFOs, used in `/experiments/membench.Rmd`
+  * `/projects/ufo-membench`            source code of a memory bechmark for UFOs, used in `/experiments/membench.Rmd`
   * `/projects/viewports`               source code of an auxiliary R package for subsetting R vectors, a dependency for `/projects/ufo-r-vectors`
 
 The root directory `/` above refers to the artifact root at `/home/submitter/workspace/artifact` (not system root).
@@ -62,7 +62,7 @@ We claim the following badges for the artifact:
 
 ### Functional evaluation of claims
 
-* The paper claims that programable memory abstractions have performance
+* The paper claims that programmable memory abstractions have performance
   comparable to ALTREP and standard R vectors and outperform ALTREP's dynamic
   dispatch, when accessing individual vector elements. This is shown in Fig. 12.
 
@@ -208,3 +208,26 @@ provide:
 
 * **UFO programming** (at `vignettes/ufo-r-programming.Rmd`) provides a tutorial
   for writing new UFO backend implementations. 
+
+  # Troubleshooting
+
+## Too many open files
+
+```
+thread 'Ufo Msg_Loop' panicked at 'Allocate Error: Too many open files (os error 24)', /home/submitter/workspace/artifact/projects/ufo-r/src/ufo-core/src/ufo_core/core_msg_loop.rs:306:74
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Error in .add_class(.Call(UFO_C_vectors_intsxp_bin, path.expand(.check_path(.expect_exactly_one(path))),  : 
+  Could not create UFO
+```
+
+A UFO keeps a file open. If many UFOs are active at once, many files are open at once. The OS only allows a limited number of files to be open at once. It may sometimes be the case, that we exceed this limit.
+
+You can check the limit in the terminal via `ulimit -n`. You can change the limit (e.g. to 10000) via the command `ulimit -n 10000`.  
+
+We initially set the limit in the VM to 10000. This is set in the user profile file `~/.profile` and takes effect when the OS is rebooted.
+
+## Starting with a fresh R session
+
+In case the user needs to start a new R session, they can restore the original workspace settings by opening the project file at `/artifact.Rproj`. This is done via `File -> Open Project...`.
+
+The files that were initially open will not be opened when a new R session is started. They can be reopened through `File -> Recent Files` or by browsing the filesystem via `File -> Open`.

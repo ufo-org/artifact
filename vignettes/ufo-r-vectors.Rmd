@@ -43,7 +43,7 @@ knitr::opts_chunk$set(
 Package *ufovectors* is an example implementation of R vectors using Userfault
 Objects (UFOs) from the *ufos* package. UFOs allow our R vectors to be lazily
 loaded into memory on demand from an arbitrary *source*. UFO vectors can be
-larger than memory, with data being transparentl loaded from source on demand
+larger than memory, with data being transparently loaded from source on demand
 and unloaded as needed.
 
 Package *ufovectors* provides a sample implementations of multiple UFO backends:
